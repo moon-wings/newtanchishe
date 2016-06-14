@@ -1,0 +1,131 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+	<title>贪吃蛇</title>
+</head>
+<style>
+	#sence{
+		width:600px;
+		border:1px solid #000;
+		position:absolute;
+		margin:auto;
+		top:0;
+		bottom:0;
+		left:0;
+		right:0;
+	}
+	.block{
+		width:30px;
+		height:30px;
+	    float:left;
+	    background:#212121;
+	}
+	.food{
+		background:#eeee00;
+	}
+	.snake{
+		background:#d9d9d9;
+	}
+</style>
+<body>
+	<div id="sence"></div>
+
+	<script src="../jquery工程文件/jquery-1.12.0.js"></script>
+	<script>
+		$(function(){
+
+			///sence
+			var ROM = 20;
+			var sence =$('#sence')
+			var i= 0,j=0;
+			for(var i=0;i<ROM;i++){          //内外循环绘制场景
+				for(var j=0;j<ROM;j++){
+					$('<div>')               //链条调用 添加类，获取id并设置坐标，追加场景
+					.addClass('block')
+					.attr('id',i+'-'+j)      //设置ID 坐标
+					.appendTo(sence);
+				}
+			}
+
+
+			//draw snake&food
+			var dict={'0-0':true,'0-1':true,'0-2':true};  //字典 蛇的身体
+			var snake = [{x:0,y:0},{x:0,y:1},{x:0,y:2}];  //数组中存放坐标对象，y值增加向右移动
+			snake.forEach(function(v){                    //v 对象
+				$('#'+v.x+'-'+v.y).addClass('snake')      //ID坐标
+			});
+			var food = {}
+			var putFood = function(){
+				do{
+					var _x=Math.floor(Math.random()*20);  //0-19
+					var _y=Math.floor(Math.random()*20);
+				}while(dict[_x+'-'+_y])
+				$('#'+_x+'-'+_y).addClass('food')
+				return {x:_x,y:_y}                       //不把食物放到蛇身上
+			} 
+			var food = putFood();                        //food存储，蛇存储
+
+
+			//move snake
+			var way = 39;                               //默认向右走
+			var move = function(){
+				var oldhead = snake[snake.length-1]
+				if(way===39){
+					var newhead = {x:oldhead.x,y:oldhead.y+1}//右：x不变 y+1
+				}else if(way===37){
+					var newhead = {x:oldhead.x,y:oldhead.y-1}//左: x不变 y-1
+				}else if(way===40){
+					var newhead = {x:oldhead.x+1,y:oldhead.y}//下：x+1 y不变
+				}else if(way===38){
+					var newhead = {x:oldhead.x-1,y:oldhead.y}//上：x-1 y不变
+				}
+
+				//hit self
+				if(dict[newhead.x+'-'+newhead.y]){              //如果遇见蛇头
+					alert('sorry Game Over');
+					clearInterval(timeId);
+					return;
+				}
+				//hit wall
+				if(newhead.x < 0 || newhead.x > 19 || newhead.y < 0 || newhead.y > 19){
+					alert('sorry Game Over');
+					clearInterval(timeId);
+					return;
+				}
+				//eat food
+				if(newhead.x === food.x && newhead.y==food.y){
+					snake.push(newhead);                         //吃到食物，蛇头增加
+					dict[newhead.x+'-'+newhead.y]=true;      //添加字典坐标=true
+					$('#'+newhead.x+'-'+newhead.y)          //找到ID坐标添加蛇类，移除食物类，把食物变成蛇
+					.addClass('snake')
+					.removeClass('food');
+					food=putFood();                            //再次放食物
+				}else{
+					snake.push(newhead);                              //增加头
+					$('#'+newhead.x+'-'+newhead.y).addClass('snake')  
+					var tail = snake.shift();                        //去掉尾巴
+					$('#'+tail.x+'-'+tail.y).removeClass('snake');
+					delete dict[tail.x+'-'+tail.y]                  //向前走
+				}
+
+		    }
+
+			$(document).bind('keydown',function(e){
+				if(Math.abs(e.keyCode-way)===2){               //上下 左右不冲突
+					return;
+				}
+				if(e.keyCode < 37 || e.keyCode > 40){
+					return;
+				}
+				var dict = {37:'left',38:'up',39:'right',40:'down'}
+				way = e.keyCode;
+			})
+
+			var timeId = setInterval(move,100)
+			
+		})
+
+	</script>
+</body>
+</html>

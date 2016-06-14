@@ -1,0 +1,300 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+	<title>新贪吃蛇</title>
+</head>
+<style>
+    *{
+    	margin:0;
+    	padding:0;
+    	list-style:none;
+    }
+    body,html{
+    	background:#686868;
+    }
+	#sence{
+		width:600px;
+		border:1px solid #212121;
+		border-bottom:none;
+		border-right:none;
+		position:absolute;
+		margin:auto;
+		top:0;
+		bottom:0;
+		left:0;
+		right:0;
+	    background:#cdc9c9;
+	}
+	.block{
+		width:29px;
+		height:29px;
+	    float:left;
+	    margin:0 1px 1px 0;
+		background:#212121;
+	}
+	.food{
+		background:#eeee00;
+	}
+	.snake{
+		background:#03FDFE;
+	}
+	.contain{
+		width:180px;
+		position:fixed;
+		right:0;
+		top:0;
+		bottom:0;
+		padding:50px;
+		border:2px solid #bebebe;
+		background:#1f1f1f;
+		text-align:center;
+	}
+	.contain .size{
+		width:auto;
+		height:auto;
+		padding:20px 20px;
+		border:1px solid #ccc;
+		text-align:center;
+	}
+	.a{
+		width:auto;
+		height:40px;
+		margin-bottom:13px;
+		text-align:center;
+		line-height:40px;
+		border:1px solid #ababab;
+		font-size:18px;
+		font-family:Arial;
+		font-weight:400;
+		color:#cfcfcf;
+		cursor:pointer;
+	}
+	#rowSelect{
+		width:100%;
+		height:40px;
+		line-height:40px;
+		text-align:center;
+		margin-top:20px;
+		outline:none;
+		border:none;
+		border-bottom:1px solid #eaeaea;
+		background:none;
+		font-size:14px;
+		color:#03FDFE;
+	}
+	.btn{
+		margin-top:30px;
+	}
+	.b{
+		width:auto;
+		height:40px;
+		line-height:40px;
+		font-size:18px;
+		font-family:Arial;
+		font-weight:400;
+		color:#cfcfcf;
+		border:1px solid #ededed;
+		margin-top:10px;
+		cursor:pointer;
+	}
+	.active{
+		color:#03FDFE;
+		border:1px solid #eeee00;
+	}
+</style>
+<body>
+	<div class="contain">
+		<ul class="size">
+			<li data-row="15" class="a c">15*15</li>
+			<li data-row="20" class="a">20*20</li>
+			<li data-row="30" class="a">30*30</li>
+		</ul>
+		<input type="text" id="rowSelect" placeholder="请输入5-40之间的数">
+		<ul class="btn">
+			<li data-r="start" class="b">start</li>
+			<li data-r="pause" class="b">pause</li>
+			<li data-r="restart" class="b">restart</li>
+		</ul>
+	</div>
+	<div id="sence"></div>
+
+	<script src="../jquery工程文件/jquery-1.12.0.js"></script>
+	<script>
+		$(function(){
+			var hang=20;
+			var snake = [{x:0,y:0},{x:0,y:1},{x:0,y:2}];  
+			var food = null;
+			var timeId=null;
+			var way = 39;
+
+//尺寸选择
+			$('ul li[data-row]').bind('click',function(){
+				hang = Number(($(this).attr('data-row')))        //不需要遍历
+				renderSence();                                  //因为hang放在了全局变量，所以这不需传参
+				$('li.active').removeClass('active')           //交叉选择器 li 里有类的  也可以用toggleClass
+				$(this).addClass('active')
+			})
+
+//开始停止按钮
+
+			$('ul li[data-r]').bind('click',function(){
+				var str = $(this).attr('data-r');             //获得当前点击的是什么按钮
+				if(str==='start'){
+					timeId=setInterval(move,200);
+					$('li.active').removeClass('active');
+			        $(this).addClass('active')
+				}else if(str==='pause'){
+					$('li.active').removeClass('active');
+                    $(this).addClass('active')
+					clearInterval(timeId)
+				}else if(str==='restart'){
+					clearInterval(timeId)                      //接下来的是新的timeid;
+					$('.snake').removeClass('snake');          // 清空蛇食物的数据
+					$('.food').removeClass('food');
+					$('li.active').removeClass('active');
+			        $(this).addClass('active')
+			        snake = [{x:0,y:0},{x:0,y:1},{x:0,y:2}];
+			        drawsnake();
+					food = putFood();                           // 还原蛇和食物的数据
+					timeId=setInterval(move,200)
+				}
+
+			})
+
+//坐标函数
+			var xy2id = function(i,j){                            //zuobiao2xuanzeqi
+				return i+'-'+j
+			}  
+
+//渲染场景               
+			var renderSence = function(){
+				hang = hang ||20;
+				var 
+				i=0,
+				j=0,
+				sence = $('#sence').empty(),
+				wh=Math.floor(600/hang);                          //宽高一直的正方形wh
+				for(;i<hang;i++){
+					for(j=0;j<hang;j++){                          //内循环 外一遍，内部就要20次,所以j=0
+						$('<div>')              
+						.addClass('block')
+						.attr('id',xy2id(i,j))
+						.width(wh-1)
+						.height(wh-1)     
+						.appendTo(sence);
+					} 
+				}
+				sence.width(wh*hang).height(wh*hang);
+			}
+			renderSence()
+
+//输入尺寸的input
+
+			$('#rowSelect').bind('keydown',function(e){
+				if(e.keyCode===13){
+					hang = $(this).val();                   //不局限在函数内部，换成全局变量
+					if(isNaN(Number(hang))){               //取整 范围 active data-row=15记录
+						alert('stay away from me')
+						return;
+					}else if(hang<5||hang>40){
+						alert('hey!Are you kidding me?');
+						return
+					}else{
+						$('li.active').removeClass('active');
+						renderSence();
+						$('li[data-row='+hang+']').addClass('active');
+					}
+					renderSence();
+					$(this).val('')
+				}
+			})
+
+
+//draw
+
+			//draw snake&food
+			var dict={'0-0':true,'0-1':true,'0-2':true};
+			var drawsnake = function(){
+				snake.forEach(function(v){                    
+					$('#'+xy2id(v.x,v.y)).addClass('snake')      
+				})
+			}
+			drawsnake();
+
+			var food = {}
+			var putFood = function(){
+				var _x=Math.floor(Math.random()*hang);  
+				var _y=Math.floor(Math.random()*hang);
+				$('#'+xy2id(_x,_y)).addClass('food')        
+				return {x:_x,y:_y}                       
+			} 
+			food = putFood(); 
+			
+
+//游戏进程
+
+			//move snake
+			var way = 39;                             
+			var move = function(){
+				var newhead;
+				var oldhead = snake[snake.length-1]
+				if(way===39){
+					newhead = {x:oldhead.x,y:oldhead.y+1}
+				}else if(way===37){
+					newhead = {x:oldhead.x,y:oldhead.y-1}
+				}else if(way===40){
+					newhead = {x:oldhead.x+1,y:oldhead.y}
+				}else if(way===38){
+					newhead = {x:oldhead.x-1,y:oldhead.y}
+				}
+
+				//hit self
+				if(dict[xy2id(newhead.x,newhead.y)]){
+					alert('sorry');
+					clearInterval(timeId);
+					return;
+				}
+				//hit wall
+				if(newhead.x < 0 || newhead.x > hang-1 || newhead.y < 0 || newhead.y > hang-1){
+					alert('sorry Game Over');
+					clearInterval(timeId);
+					return;
+				}
+				//eat food
+				if(newhead.x === food.x && newhead.y===food.y){
+					snake.push(newhead);  
+					dict[xy2id(newhead.x,newhead.y)]=true;     
+					$('#'+xy2id(newhead.x,newhead.y))        
+					.addClass('snake')
+					.removeClass('food');
+					food=putFood();                            
+				}else{
+					snake.push(newhead);   
+					dict[xy2id(newhead.x,newhead.y)]=true;                            
+					$('#'+xy2id(newhead.x,newhead.y)).addClass('snake')  
+					var tail = snake.shift();                       
+					$('#'+xy2id(tail.x,tail.y)).removeClass('snake');
+					delete dict[xy2id(tail.x,tail.y)]                 
+				}
+
+		    }
+
+			$(document).bind('keydown',function(e){
+				if(Math.abs(e.keyCode-way)===2){             
+					return;
+				}
+				if(e.keyCode < 37 || e.keyCode > 40){
+					return;
+				}
+				var dict = {37:'left',38:'up',39:'right',40:'down'}
+				way = e.keyCode;
+			})
+
+			// timeId = setInterval(move,200)
+			
+		})
+
+	</script>
+</body>
+</html>
